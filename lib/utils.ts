@@ -32,33 +32,37 @@ export function extractPrice(...elements: any) {
 
 // Extracts and returns the currency symbol from an element.
 export function extractCurrency(element: any) {
-  const currencyText = element.text().trim().slice(0, 1);
-  return currencyText ? currencyText : "";
+  if (typeof element === "string") {
+    return element.trim().slice(0, 1); // Get the first character (currency symbol)
+  } else if (element && typeof element.text === "function") {
+    return element.text().trim().slice(0, 1);
+  }
+  return "";
 }
 
 // Extracts description from two possible elements from amazon
-export function extractDescription($: any) {
-  // these are possible elements holding description of the product
-  const selectors = [
-    ".a-unordered-list .a-list-item",
-    ".a-expander-content p",
-    // Add more selectors here if needed
-  ];
+// export function extractDescription($: any) {
+//   // these are possible elements holding description of the product
+//   const selectors = [
+//     ".a-unordered-list .a-list-item",
+//     ".a-expander-content p",
+//     // Add more selectors here if needed
+//   ];
 
-  for (const selector of selectors) {
-    const elements = $(selector);
-    if (elements.length > 0) {
-      const textContent = elements
-        .map((_: any, element: any) => $(element).text().trim())
-        .get()
-        .join("\n");
-      return textContent;
-    }
-  }
+//   for (const selector of selectors) {
+//     const elements = $(selector);
+//     if (elements.length > 0) {
+//       const textContent = elements
+//         .map((_: any, element: any) => $(element).text().trim())
+//         .get()
+//         .join("\n");
+//       return textContent;
+//     }
+//   }
 
-  // If no matching elements were found, return an empty string
-  return "";
-}
+//   // If no matching elements were found, return an empty string
+//   return "";
+// }
 
 export function getHighestPrice(priceList: PriceHistoryItem[]) {
   let highestPrice = priceList[0];

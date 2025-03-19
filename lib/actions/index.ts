@@ -32,7 +32,7 @@ export async function scrapeAndStoreProduct(productUrl: string) {
         ...scrapedProduct,
         priceHistory: updatedPriceHistory,
         lowestPrice: getLowestPrice(updatedPriceHistory),
-        highestPrice: getHighestPrice(updatedPriceHistory),
+        highestPrice:getHighestPrice(updatedPriceHistory),
         averagePrice: getAveragePrice(updatedPriceHistory),
       }
     }
@@ -44,6 +44,7 @@ export async function scrapeAndStoreProduct(productUrl: string) {
     );
 
     revalidatePath(`/products/${newProduct._id}`);
+    return newProduct;
   } catch (error: any) {
     throw new Error(`Failed to create/update product: ${error.message}`)
   }
