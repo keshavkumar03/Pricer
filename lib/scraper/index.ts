@@ -2,7 +2,7 @@
 import { connectToDB } from '../mongoose';
 import Product from '../models/product.model';
 import puppeteer from 'puppeteer';
-import { extractCurrency, extractDescription, extractPrice } from '../utils'; // Keep this import
+//import { extractCurrency, extractDescription, extractPrice } from '../utils'; // Keep this import
 
 export async function scrapeAmazonProduct(url: string) {
   if (!url) {
