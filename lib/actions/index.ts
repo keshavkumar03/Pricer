@@ -8,6 +8,7 @@ import { getAveragePrice, getHighestPrice, getLowestPrice } from "../utils";
 import { User } from "@/types";
 import { generateEmailBody, sendEmail } from "../nodemailer";
 
+
 export async function scrapeAndStoreProduct(productUrl: string) {
   if(!productUrl) return;
 
@@ -19,7 +20,6 @@ export async function scrapeAndStoreProduct(productUrl: string) {
     if(!scrapedProduct) return;
 
     let product = scrapedProduct;
-
     const existingProduct = await Product.findOne({ url: scrapedProduct.url });
 
     if(existingProduct) {
@@ -50,6 +50,7 @@ export async function scrapeAndStoreProduct(productUrl: string) {
   }
 }
 
+
 export async function getProductById(productId: string) {
   try {
     connectToDB();
@@ -64,6 +65,7 @@ export async function getProductById(productId: string) {
   }
 }
 
+
 export async function getAllProducts() {
   try {
     connectToDB();
@@ -75,6 +77,7 @@ export async function getAllProducts() {
     console.log(error);
   }
 }
+
 
 export async function getSimilarProducts(productId: string) {
   try {
@@ -94,24 +97,43 @@ export async function getSimilarProducts(productId: string) {
   }
 }
 
+
+
 export async function addUserEmailToProduct(productId: string, userEmail: string) {
   try {
+    console.log(`Attempting to add user ${userEmail} to product ${productId}`);
+    
+    await connectToDB();
     const product = await Product.findById(productId);
 
-    if(!product) return;
+    if (!product) {
+      console.error(`Product not found with ID: ${productId}`);
+      throw new Error('Product not found');
+    }
 
     const userExists = product.users.some((user: User) => user.email === userEmail);
 
-    if(!userExists) {
+    if (!userExists) {
       product.users.push({ email: userEmail });
-
       await product.save();
 
-      const emailContent = await generateEmailBody(product, "WELCOME");
+      console.log(`User ${userEmail} added to product ${productId} successfully`);
 
+      // Generate and send welcome email
+      console.log('Generating email content...');
+      const emailContent = await generateEmailBody(product, "WELCOME");
+      
+      console.log('Sending email...');
       await sendEmail(emailContent, [userEmail]);
+      
+      console.log('Email sent successfully!');
+      return { success: true, message: 'User added and email sent successfully' };
+    } else {
+      console.log(`User ${userEmail} already exists for product ${productId}`);
+      return { success: true, message: 'User already tracking this product' };
     }
   } catch (error) {
-    console.log(error);
+    console.error('Error in addUserEmailToProduct:', error);
+    throw error; // Re-throw to handle in the frontend
   }
 }

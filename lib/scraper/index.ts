@@ -1,10 +1,16 @@
 "use server"
-
+import { connectToDB } from '../mongoose';
+import Product from '../models/product.model';
 import puppeteer from 'puppeteer';
 import { extractCurrency, extractDescription, extractPrice } from '../utils'; // Keep this import
 
 export async function scrapeAmazonProduct(url: string) {
-  if (!url) return;
+  if (!url) {
+    console.error('No URL provided to scrapeAmazonProduct');
+    return null;
+  }
+
+  console.log(`Starting to scrape: ${url}`);
 
   try {
     // Launch Puppeteer browser without proxy
@@ -42,8 +48,6 @@ export async function scrapeAmazonProduct(url: string) {
         return "";
       })();
       
-      
-
       // Return raw extracted data as an object
       return {
         title,
@@ -56,39 +60,65 @@ export async function scrapeAmazonProduct(url: string) {
       };
     });
 
-    // Process raw data in Node.js context
-    // const currency = extractCurrency(data.currentPrice);
-    // const processedDescription = extractDescription(data.description);
-    // const currentPrice = extractPrice(data.currentPrice);
-    // const originalPrice = extractPrice(data.originalPrice);
+    await browser.close();
+
+    // Validate scraped data
+    if (!data.title) {
+      console.warn(`No title found for URL: ${url}`);
+      return null;
+    }
+
+    // Process the extracted price
+    const processedCurrentPrice = extractPrice(data.currentPrice) || extractPrice(data.originalPrice);
+    const processedOriginalPrice = extractPrice(data.originalPrice) || extractPrice(data.currentPrice);
+
+    if (!processedCurrentPrice || isNaN(processedCurrentPrice)) {
+      console.warn(`⚠️ Skipping product with invalid price: ${url}`);
+      return null;
+    }
 
     // Construct data object with processed information
     const finalData = {
-      url,
-      currency: data.currentPrice,
-      image: data.imageUrls[0],
+      url: url, // Explicitly use the url parameter
+      currency: extractCurrency(data.currentPrice) || 'INR',
+      image: data.imageUrls[0] || '',
       title: data.title,
-      currentPrice: Number(data.currentPrice) || Number(data.originalPrice),
-      originalPrice: Number(data.originalPrice) || Number(data.currentPrice),
+      currentPrice: processedCurrentPrice,
+      originalPrice: processedOriginalPrice,
       priceHistory: [],
-      discountRate: Number(data.discountRate),
+      discountRate: Number(data.discountRate) || 0,
       category: 'category',
       reviewsCount: 100,
       stars: 4.5,
       isOutOfStock: data.outOfStock,
-      description: data.description,
-      lowestPrice: Number(data.currentPrice) || Number(data.originalPrice),
-      highestPrice: Number(data.originalPrice) || Number(data.currentPrice),
-      averagePrice: Number(data.currentPrice) || Number(data.originalPrice),
+      description: data.description || '',
+      lowestPrice: processedCurrentPrice,
+      highestPrice: processedOriginalPrice,
+      averagePrice: processedCurrentPrice,
     };
 
-    console.log(finalData);
+    console.log('Processed finalData:', {
+      url: finalData.url,
+      title: finalData.title.substring(0, 50) + '...',
+      currentPrice: finalData.currentPrice,
+      originalPrice: finalData.originalPrice
+    });
 
-    await browser.close();
-    console.log(finalData); // Close the browser after extraction
-    return finalData;
+    // Connect to DB
+    await connectToDB();
+
+    // Save or update product
+    const savedProduct = await Product.findOneAndUpdate(
+      { url: finalData.url },
+      finalData,
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    console.log('Successfully saved/updated product:', savedProduct._id);
+    return savedProduct;
 
   } catch (error: any) {
-    console.log(error);
+    console.error(`Error scraping product ${url}:`, error.message);
+    return null;
   }
 }

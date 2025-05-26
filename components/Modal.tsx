@@ -10,24 +10,48 @@ interface Props {
 }
 
 const Modal = ({ productId }: Props) => {
-  let [isOpen, setIsOpen] = useState(true)
+  let [isOpen, setIsOpen] = useState(false) // Changed to false initially
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setMessage('');
+    setIsError(false);
 
-    await addUserEmailToProduct(productId, email);
-
-    setIsSubmitting(false)
-    setEmail('')
-    closeModal()
+    try {
+      console.log('Submitting email:', email, 'for product:', productId);
+      
+      const result = await addUserEmailToProduct(productId, email);
+      
+      console.log('Result:', result);
+      setMessage('Successfully subscribed to price tracking!');
+      setIsError(false);
+      setEmail('');
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        closeModal();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      setMessage('Failed to subscribe. Please try again.');
+      setIsError(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const openModal = () => setIsOpen(true);
-
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+    setMessage('');
+    setIsError(false);
+  };
 
   return (
     <>
@@ -115,11 +139,20 @@ const Modal = ({ productId }: Props) => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email address"
                       className='dialog-input'
+                      disabled={isSubmitting}
                     />
                   </div>
 
-                  <button type="submit"
+                  {message && (
+                    <div className={`mt-3 text-sm ${isError ? 'text-red-600' : 'text-green-600'}`}>
+                      {message}
+                    </div>
+                  )}
+
+                  <button 
+                    type="submit"
                     className="dialog-btn"
+                    disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Submitting...' : 'Track'}
                   </button>

@@ -1,7 +1,8 @@
 "use server"
-
 import { EmailContent, EmailProductInfo, NotificationType } from '@/types';
 import nodemailer from 'nodemailer';
+import 'dotenv/config'; // This will auto-load .env variables
+
 
 const Notification = {
   WELCOME: 'WELCOME',
@@ -15,6 +16,7 @@ export async function generateEmailBody(
   type: NotificationType
   ) {
   const THRESHOLD_PERCENTAGE = 40;
+
   // Shorten the product title
   const shortenedTitle =
     product.title.length > 20
@@ -81,27 +83,43 @@ export async function generateEmailBody(
 }
 
 const transporter = nodemailer.createTransport({
-  pool: true,
-  service: 'hotmail',
-  port: 2525,
+  secure: true, // use TLS
+  host: 'smtp.gmail.com',
+  port: 465, // SMTP port for secure connection
+
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER || 'pricertracker@gmail.com', // this is your Gmail address0
+    pass: process.env.EMAIL_PASS || 'nzwfkntknmowvdzv', // this is your App Password
   },
-  maxConnections: 1
-})
+  tls: { rejectUnauthorized: false },
+});console.log('Using EMAIL:', process.env.EMAIL_USER);
+
 
 export const sendEmail = async (emailContent: EmailContent, sendTo: string[]) => {
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: process.env.EMAIL_USER || 'pricertracker@gmail.com',
     to: sendTo,
     html: emailContent.body,
     subject: emailContent.subject,
   }
 
-  transporter.sendMail(mailOptions, (error: any, info: any) => {
-    if(error) return console.log(error);
+  try {
+    // Use promisified version of sendMail
+    const info = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (error: any, info: any) => {
+        if (error) {
+          console.error('Email sending error:', error);
+          reject(error);
+        } else {
+          console.log('Email sent successfully:', info);
+          resolve(info);
+        }
+      });
+    });
     
-    console.log('Email sent: ', info);
-  })
+    return info;
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw new Error(`Failed to send email: ${error}`);
+  }
 }

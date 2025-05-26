@@ -9,66 +9,29 @@ const Notification = {
 
 const THRESHOLD_PERCENTAGE = 40;
 
-// Extracts and returns the price from a list of possible elements.
-export function extractPrice(...elements: any) {
-  for (const element of elements) {
-    const priceText = element.text().trim();
-
-    if(priceText) {
-      const cleanPrice = priceText.replace(/[^\d.]/g, '');
-
-      let firstPrice; 
-
-      if (cleanPrice) {
-        firstPrice = cleanPrice.match(/\d+\.\d{2}/)?.[0];
-      } 
-
-      return firstPrice || cleanPrice;
-    }
-  }
-
-  return '';
+export function extractPrice(priceStr: string): number {
+  if (!priceStr) return 0;
+  const cleaned = priceStr.replace(/[^0-9.]/g, '');
+  return parseFloat(cleaned) || 0;
 }
 
-// Extracts and returns the currency symbol from an element.
-export function extractCurrency(element: any) {
-  if (typeof element === "string") {
-    return element.trim().slice(0, 1); // Get the first character (currency symbol)
-  } else if (element && typeof element.text === "function") {
-    return element.text().trim().slice(0, 1);
-  }
-  return "";
+export function extractCurrency(priceStr: string): string {
+  const match = priceStr?.match(/[₹$€£]/);
+  if (match) return match[0];
+  return 'INR'; // default
 }
-
-// Extracts description from two possible elements from amazon
-// export function extractDescription($: any) {
-//   // these are possible elements holding description of the product
-//   const selectors = [
-//     ".a-unordered-list .a-list-item",
-//     ".a-expander-content p",
-//     // Add more selectors here if needed
-//   ];
-
-//   for (const selector of selectors) {
-//     const elements = $(selector);
-//     if (elements.length > 0) {
-//       const textContent = elements
-//         .map((_: any, element: any) => $(element).text().trim())
-//         .get()
-//         .join("\n");
-//       return textContent;
-//     }
-//   }
-
-//   // If no matching elements were found, return an empty string
-//   return "";
-// }
 
 export function getHighestPrice(priceList: PriceHistoryItem[]) {
+  // Check if priceList is empty or undefined
+  if (!priceList || priceList.length === 0) {
+    return 0;
+  }
+
   let highestPrice = priceList[0];
 
-  for (let i = 0; i < priceList.length; i++) {
-    if (priceList[i].price > highestPrice.price) {
+  for (let i = 1; i < priceList.length; i++) {
+    // Add null check for each price item
+    if (priceList[i] && priceList[i].price > highestPrice.price) {
       highestPrice = priceList[i];
     }
   }
@@ -77,10 +40,16 @@ export function getHighestPrice(priceList: PriceHistoryItem[]) {
 }
 
 export function getLowestPrice(priceList: PriceHistoryItem[]) {
+  // Check if priceList is empty or undefined
+  if (!priceList || priceList.length === 0) {
+    return 0;
+  }
+
   let lowestPrice = priceList[0];
 
-  for (let i = 0; i < priceList.length; i++) {
-    if (priceList[i].price < lowestPrice.price) {
+  for (let i = 1; i < priceList.length; i++) {
+    // Add null check for each price item
+    if (priceList[i] && priceList[i].price < lowestPrice.price) {
       lowestPrice = priceList[i];
     }
   }
@@ -89,7 +58,16 @@ export function getLowestPrice(priceList: PriceHistoryItem[]) {
 }
 
 export function getAveragePrice(priceList: PriceHistoryItem[]) {
-  const sumOfPrices = priceList.reduce((acc, curr) => acc + curr.price, 0);
+  // Check if priceList is empty or undefined
+  if (!priceList || priceList.length === 0) {
+    return 0;
+  }
+
+  const sumOfPrices = priceList.reduce((acc, curr) => {
+    // Add null check for each price item
+    return acc + (curr && curr.price ? curr.price : 0);
+  }, 0);
+  
   const averagePrice = sumOfPrices / priceList.length || 0;
 
   return averagePrice;
